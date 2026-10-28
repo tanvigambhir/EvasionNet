@@ -1,35 +1,52 @@
-# EvasionNet: Spatial-Transcriptomic Microglial Evasion Networks
+# EvasionNet: Microglial States Across Alzheimer's Disease Progression
 
-EvasionNet is an end-to-end single-nucleus RNA sequencing (snRNA-seq) pipeline designed to isolate and map the transcriptomic states of human microglia as they evade or respond to advancing Alzheimer's disease pathology. 
+EvasionNet is an end-to-end single-nucleus RNA sequencing (snRNA-seq) analysis pipeline that tracks how human microglia, the brain's resident immune cells, change as Alzheimer's disease pathology advances across Braak stages 0 to 6.
 
 ## Project Overview
-Using spatial-transcriptomic data from the Allen Institute (Entorhinal Cortex), this project tracks the biological rewiring of immune cells across a continuous disease timeline (Braak Stages 0 -> 6). 
 
-The pipeline identifies Disease-Associated Microglia (DAM) and mathematically isolates the primary gene drivers responsible for this state change, specifically highlighting the massive upregulation of non-coding RNAs like *MALAT1* and *ADAM7-AS1* alongside systemic mitochondrial gene collapse.
+- **Question:** How do microglial transcriptional states shift as Alzheimer's pathology progresses?
+- **Data:** Publicly available Allen Institute human brain data from the entorhinal cortex, one of the earliest regions affected in Alzheimer's disease. The source dataset is part of a spatial transcriptomics resource; this analysis uses the single-nucleus expression data.
+- **Approach:** Quality control, dimensionality reduction (PCA, UMAP), clustering, and differential gene expression, with Braak stage treated as a continuous pseudo-time variable for disease progression.
 
-## Computational Architecture & Cross-Language Bridging
-A major bottleneck in spatial-transcriptomics is format lock-in (e.g., Python-exclusive `.h5ad` architectures failing in R environments due to `SeuratDisk` dependency issues on ARM processors). 
+## Key Observations
 
-To ensure a robust, reproducible pipeline, EvasionNet utilizes a cross-language extraction strategy:
-1. **Python (`scanpy` / `pandas`):** Natively parses the raw `.h5ad` object, extracting and transposing the sparse counts matrix and metadata into universal CSVs.
-2. **R (`Seurat`):** Rebuilds the object cleanly for high-performance Quality Control, PCA, UMAP dimensionality reduction, and Differential Gene Expression (DGE) analysis.
+- Alzheimer's-associated microglia form a distinct cluster on the UMAP, separate from the homeostatic microglial core (`UMAP_DiseaseState.png`).
+- Expression of the long non-coding RNAs **MALAT1** and **ADAM7-AS1** increases at later Braak stages (`RidgePlot_MALAT1.png`).
+- Mitochondrial gene expression decreases with disease stage.
 
-## Key Visualizations
+## Workflow
 
-### 1. Disease State Clustering (UMAP)
-Microglial transcriptomes were reduced to 2D space. The visualization reveals a distinct, physically isolated "island" of Alzheimer's microglia (left) completely detached from the homeostatic core (center), proving a fundamental transcriptomic state change.
-*(See `/plots/UMAP_DiseaseState.png`)*
+The pipeline is split across Python and R to avoid SeuratDisk `.h5ad` conversion issues on ARM (Apple Silicon) machines.
 
-### 2. Temporal Pathology Mapping (Ridge Plot)
-By utilizing Braak Staging as a continuous pseudo-time variable, the pipeline maps the activation of the primary evasion marker, *MALAT1*. Expression remains dormant in healthy brains (Stage 0) and violently spikes as tau pathology reaches terminal severity (Stage 6).
-*(See `/plots/RidgePlot_MALAT1.png`)*
+1. **`extract_h5ad.ipynb` (Python):** Loads the `.h5ad` object with Scanpy and exports the sparse counts matrix and cell metadata to CSV with Pandas.
+2. **`ProxiMap-AD.R` (R):** Rebuilds the Seurat object from the CSVs and runs quality control, normalization, PCA, UMAP, clustering, and differential expression. Generates the figures and saves the final `.rds` object.
+
+## Figures
+
+| File | Description |
+|---|---|
+| `QC_ViolinPlot.png` | Quality-control metrics per nucleus |
+| `UMAP_DiseaseState.png` | UMAP of microglia colored by disease state |
+| `FeaturePlot_Markers.png` | Expression of microglial marker genes |
+| `RidgePlot_MALAT1.png` | MALAT1 expression across Braak stages |
 
 ## How to Run
-1. Clone the repository.
-2. Run `scripts/extract_h5ad.py` in your standard ML/Python environment to bypass dependency bottlenecks and generate the matrices.
-3. Run `scripts/pipeline.R` in RStudio to execute the Seurat workflow, generate visualizations, and compile the final `.rds` object.
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/tanvigambhir/EvasionNet.git
+   cd EvasionNet
+   ```
+2. Download the Allen Institute `.h5ad` file and update the file path in `extract_h5ad.ipynb`.
+3. Run `extract_h5ad.ipynb` to export the counts matrix and metadata to CSV.
+4. Open `ProxiMap-AD.R` in RStudio and run it to generate the figures and the final `.rds` object.
+
+## Limitations and Next Steps
+
+- **MALAT1** is highly abundant in nuclear RNA, so its signal in snRNA-seq should be treated as a hypothesis requiring orthogonal validation.
+- **Mitochondrial gene expression** is also used as a quality-control metric in single-nucleus data; the observed decrease should be checked against QC filtering before biological interpretation.
+- **Next steps:** incorporate spatial coordinates to test whether disease-associated microglia localize near pathology, and validate candidate genes in an independent cohort.
 
 ## Tech Stack
-* **Languages:** Python, R
-* **Libraries:** Scanpy, Pandas, Seurat, ggplot2
-* **Biology:** snRNA-seq, Differential Gene Expression, Neuroimmunology, Alzheimer's Pathology (Braak Staging)
+
+Python (Scanpy, Pandas) · R (Seurat, ggplot2) · snRNA-seq · Differential Expression · Neuroimmunology · Braak Staging
